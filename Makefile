@@ -14,6 +14,6 @@ logs:
 
 package:
 	 @echo "Packaging extension..."
-	 zip -r net-sniffer.zip . -x "*.git*" "node_modules/*" "*.zip" "Makefile" "ecosystem.config.cjs" "dev-server.js" "package.json" "bun.lockb" "AGENT.md" "pics/*"
+	 git archive --format zip --output net-sniffer.zip HEAD
 	 @echo "Package created: net-sniffer.zip"
 
