@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>Net Sniffer</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="app-header">
+        <h1 class="app-title">Net Sniffer</h1>
+        <span class="app-subtitle">仅展示概览，详情请点击查看按钮</span>
+      </header>
+
+      <section class="controls">
+        <div class="field">
+          <span class="field-label">筛选关键词 (逗号分隔)</span>
+          <div class="keyword-wrapper">
+            <input id="pathKeyword" type="text" class="input" placeholder="例如: /api, .json" />
+            <div id="keywordHistoryDropdown" class="keyword-history-dropdown"></div>
+          </div>
+        </div>
+        <div class="buttons">
+          <button id="refreshBtn" class="btn">🔄 刷新</button>
+          <button id="viewDetailsBtn" class="btn">📋 详情</button>
+          <button id="settingsBtn" class="btn">⚙️ 设置</button>
+          <button id="clearBtn" class="btn btn-danger">🗑️ 清空</button>
+        </div>
+      </section>
+
+      <section class="list">
+        <div id="emptyHint" class="empty">暂无记录</div>
+        <ul id="requestList" class="request-list"></ul>
+      </section>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
