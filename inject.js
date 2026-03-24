@@ -16,18 +16,32 @@
     const absoluteUrl = new URL(url, window.location.href).href;
     const requestBody = init.body || "";
 
+    // 捕获 headers
+    let headers = {};
+    if (init.headers) {
+      if (init.headers instanceof Headers) {
+        try {
+          headers = Object.fromEntries(init.headers.entries());
+        } catch (_) {}
+      } else if (Array.isArray(init.headers)) {
+        init.headers.forEach(([k, v]) => { headers[k] = v; });
+      } else if (typeof init.headers === 'object') {
+        headers = { ...init.headers };
+      }
+    }
+
     let response;
     try {
       response = await originalFetch.apply(this, args);
     } catch (err) {
-      notify({ url: absoluteUrl, method, status: 0, body: String(err), requestBody });
+      notify({ url: absoluteUrl, method, status: 0, body: String(err), requestBody, headers });
       throw err;
     }
 
     try {
       const clone = response.clone();
       clone.text().then((bodyText) => {
-        notify({ url: absoluteUrl, method, status: response.status, body: bodyText, requestBody });
+        notify({ url: absoluteUrl, method, status: response.status, body: bodyText, requestBody, headers });
       }).catch(() => {});
     } catch (e) {}
 
@@ -51,7 +65,7 @@
     if (this.__netSnifferInfo) {
       this.__netSnifferInfo.requestBody = body || "";
     }
-    
+
     function handler() {
       try {
         const info = xhr.__netSnifferInfo || {};
@@ -59,11 +73,28 @@
         const absoluteUrl = new URL(url, window.location.href).href;
         const method = (info.method || "GET").toUpperCase();
         const requestBody = info.requestBody || "";
+
+        // 捕获 XHR headers
+        const headers = {};
+        try {
+          const headerString = xhr.getAllRequestHeaders();
+          if (headerString) {
+            headerString.split(/\r?\n/).forEach(line => {
+              const idx = line.indexOf(': ');
+              if (idx > 0) {
+                const key = line.substring(0, idx);
+                const value = line.substring(idx + 2);
+                headers[key] = value;
+              }
+            });
+          }
+        } catch (_) {}
+
         let bodyText = "";
         if (xhr.responseType === "" || xhr.responseType === "text") {
           bodyText = xhr.responseText || "";
         }
-        notify({ url: absoluteUrl, method, status: xhr.status, body: bodyText, requestBody });
+        notify({ url: absoluteUrl, method, status: xhr.status, body: bodyText, requestBody, headers });
       } catch (e) {}
     }
     xhr.addEventListener("load", handler);

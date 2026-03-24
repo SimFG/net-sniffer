@@ -81,6 +81,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const status = payload.status || 0;
         const body = payload.body || "";
         const requestBody = payload.requestBody || "";
+        const headers = payload.headers || {};
         const path = extractPath(url);
 
         // 仅获取 200 请求的响应
@@ -112,6 +113,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           path,
           body,
           requestBody,
+          headers,
           description: "",
           createdAt: now
         };
@@ -156,7 +158,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await saveState();
         sendResponse({ ok: true });
       } else if (message.type === "replay-request") {
-        const { id, url, method, requestBody } = message;
+        const { id, url, method, requestBody, headers } = message;
 
         // 参数校验
         if (!url || !method) {
@@ -171,11 +173,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
 
-        // 构造 fetch 选项（初始版本不带 headers）
+        // 构造 fetch 选项
         const startTime = Date.now();
         const fetchOptions = {
           method: method,
         };
+
+        // 添加 headers
+        if (headers && typeof headers === 'object' && Object.keys(headers).length > 0) {
+          try {
+            fetchOptions.headers = new Headers(headers);
+          } catch (_) {
+            // 如果 Headers 构造失败，忽略 headers
+          }
+        }
 
         // 仅 POST/PUT/PATCH 带 body
         if (["POST", "PUT", "PATCH"].includes(method) && requestBody) {

@@ -131,7 +131,8 @@ async function handleReplay(record) {
       id: record.id,
       url: record.url,
       method: record.method,
-      requestBody: record.requestBody
+      requestBody: record.requestBody,
+      headers: record.headers
     });
 
     // 处理响应
