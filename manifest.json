@@ -3,7 +3,7 @@
   "name": "Net Sniffer",
   "version": "0.1.0",
   "description": "捕捉当前页面网络请求并支持过滤和备注的演示扩展。",
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting"],
   "host_permissions": ["<all_urls>"],
   "options_page": "options.html",
   "web_accessible_resources": [

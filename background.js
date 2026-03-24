@@ -200,21 +200,63 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         // 发送消息给 Content Script，在页面上下文中执行 fetch
         try {
-          const tabResponse = await chrome.tabs.sendMessage(targetTabId, {
-            type: "replay-in-tab",
-            id,
-            url,
-            method: message.method,
-            requestBody: message.requestBody,
-            headers: message.headers
+          const results = await chrome.scripting.executeScript({
+            target: { tabId: targetTabId },
+            func: (url, method, requestBody, headers) => {
+              return (async () => {
+                const fetchOptions = { method: method || "GET" };
+                if (headers && Object.keys(headers).length > 0) {
+                  try { fetchOptions.headers = new Headers(headers); } catch (_) {}
+                }
+                if (["POST", "PUT", "PATCH"].includes(method) && requestBody) {
+                  fetchOptions.body = requestBody;
+                }
+
+                const startTime = Date.now();
+                try {
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 30000);
+                  fetchOptions.signal = controller.signal;
+                  const response = await fetch(url, fetchOptions);
+                  clearTimeout(timeoutId);
+                  const duration = Date.now() - startTime;
+                  let bodyText = "";
+                  try { bodyText = await response.text(); } catch (_) { bodyText = "[无法读取响应体]"; }
+                  return { success: response.ok, status: response.status, statusText: response.statusText, body: bodyText, duration };
+                } catch (e) {
+                  const duration = Date.now() - startTime;
+                  let errorMsg = e.name === "AbortError" ? "request-timeout"
+                    : (e.message.includes("Failed to fetch") || e.message.includes("NetworkError") ? "cors-error" : e.message);
+                  return { success: false, error: errorMsg, duration };
+                }
+              })();
+            },
+            args: [url, message.method, message.requestBody, message.headers]
           });
-          sendResponse(tabResponse);
+
+          const result = results[0]?.result;
+          if (!result) {
+            throw new Error("script-execution-failed");
+          }
+
+          sendResponse({
+            type: "replay-response",
+            id,
+            success: result.success,
+            status: result.status,
+            statusText: result.statusText,
+            body: result.body,
+            error: result.error,
+            duration: result.duration,
+            timestamp: Date.now()
+          });
         } catch (e) {
+          console.error("[NetSniffer] Replay failed:", e.message);
           sendResponse({
             type: "replay-response",
             id,
             success: false,
-            error: "tab-communication-failed",
+            error: e.message || "replay-failed",
             duration: 0,
             timestamp: Date.now()
           });
