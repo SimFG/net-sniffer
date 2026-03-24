@@ -158,10 +158,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await saveState();
         sendResponse({ ok: true });
       } else if (message.type === "replay-request") {
-        const { id, url, method, requestBody, headers } = message;
+        const { id, url } = message;
 
         // 参数校验
-        if (!url || !method) {
+        if (!url || !id) {
           sendResponse({
             type: "replay-response",
             id,
@@ -173,68 +173,49 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
 
-        // 构造 fetch 选项
-        const startTime = Date.now();
-        const fetchOptions = {
-          method: method,
-        };
-
-        // 添加 headers
-        if (headers && typeof headers === 'object' && Object.keys(headers).length > 0) {
-          try {
-            fetchOptions.headers = new Headers(headers);
-          } catch (_) {
-            // 如果 Headers 构造失败，忽略 headers
-          }
-        }
-
-        // 仅 POST/PUT/PATCH 带 body
-        if (["POST", "PUT", "PATCH"].includes(method) && requestBody) {
-          fetchOptions.body = requestBody;
-        }
-
+        // 根据 URL origin 查找对应标签页
+        let targetTabId = null;
         try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s 超时
-          fetchOptions.signal = controller.signal;
-
-          const response = await fetch(url, fetchOptions);
-          clearTimeout(timeoutId);
-
-          const duration = Date.now() - startTime;
-          let bodyText = "";
-          try {
-            bodyText = await response.text();
-          } catch (_) {
-            bodyText = "[无法读取响应体]";
+          const urlObj = new URL(url);
+          const origin = urlObj.origin;
+          const tabs = await chrome.tabs.query({ url: `${origin}/*` });
+          if (tabs && tabs.length > 0) {
+            // 优先选择当前窗口中的标签页
+            const currentWindowTabs = tabs.filter(t => t.windowId === tabs[0].windowId);
+            targetTabId = currentWindowTabs[0]?.id || tabs[0]?.id;
           }
+        } catch (_) {}
 
-          sendResponse({
-            type: "replay-response",
-            id,
-            success: response.ok,
-            status: response.status,
-            statusText: response.statusText,
-            body: bodyText,
-            duration,
-            timestamp: Date.now()
-          });
-        } catch (e) {
-          const duration = Date.now() - startTime;
-          let errorMsg = e.message || "unknown-error";
-
-          if (e.name === "AbortError") {
-            errorMsg = "request-timeout";
-          } else if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
-            errorMsg = "cors-error";
-          }
-
+        if (!targetTabId) {
           sendResponse({
             type: "replay-response",
             id,
             success: false,
-            error: errorMsg,
-            duration,
+            error: "tab-not-found",
+            duration: 0,
+            timestamp: Date.now()
+          });
+          return;
+        }
+
+        // 发送消息给 Content Script，在页面上下文中执行 fetch
+        try {
+          const tabResponse = await chrome.tabs.sendMessage(targetTabId, {
+            type: "replay-in-tab",
+            id,
+            url,
+            method: message.method,
+            requestBody: message.requestBody,
+            headers: message.headers
+          });
+          sendResponse(tabResponse);
+        } catch (e) {
+          sendResponse({
+            type: "replay-response",
+            id,
+            success: false,
+            error: "tab-communication-failed",
+            duration: 0,
             timestamp: Date.now()
           });
         }
