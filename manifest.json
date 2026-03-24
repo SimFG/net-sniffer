@@ -8,7 +8,7 @@
   "options_page": "options.html",
   "web_accessible_resources": [
     {
-      "resources": ["inject.js", "details.html"],
+      "resources": ["inject.js", "details.html", "theme-utils.js"],
       "matches": ["<all_urls>"]
     }
   ],
