@@ -4,32 +4,89 @@
   <meta charset="UTF-8">
   <title>Network Sniffer - 记录详情</title>
   <style>
-    body { font-family: system-ui; padding: 20px; background: #f9fafb; color: #111827; }
+    :root {
+      /* Light mode defaults */
+      --bg-primary: #f9fafb;
+      --bg-secondary: #ffffff;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --border-subtle: #f3f4f6;
+      --brand-primary: #4f46e5;
+      --brand-hover: #4338ca;
+      --btn-text: #ffffff;
+      --input-border: #d1d5db;
+      --input-bg: #ffffff;
+      --hover-bg: #f3f4f6;
+      --status-success-bg: #dcfce7;
+      --status-success-text: #166534;
+      --status-warning-bg: #fef9c3;
+      --status-warning-text: #854d0e;
+      --status-error-bg: #fee2e2;
+      --status-error-text: #b91c1c;
+      --status-default-bg: #f3f4f6;
+      --status-default-text: #374151;
+      --code-bg: #f8fafc;
+      --code-border: #e2e8f0;
+      --dropdown-bg: #ffffff;
+      --dropdown-border: #d1d5db;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #111827;
+        --bg-secondary: #1f2937;
+        --text-primary: #f9fafb;
+        --text-secondary: #9ca3af;
+        --border-color: #374151;
+        --border-subtle: #1f2937;
+        --brand-primary: #6366f1;
+        --brand-hover: #4f46e5;
+        --btn-text: #ffffff;
+        --input-border: #4b5563;
+        --input-bg: #1f2937;
+        --hover-bg: #374151;
+        --status-success-bg: #14532d;
+        --status-success-text: #86efac;
+        --status-warning-bg: #713f12;
+        --status-warning-text: #fde047;
+        --status-error-bg: #7f1d1d;
+        --status-error-text: #fca5a5;
+        --status-default-bg: #374151;
+        --status-default-text: #e5e7eb;
+        --code-bg: #1f2937;
+        --code-border: #374151;
+        --dropdown-bg: #1f2937;
+        --dropdown-border: #4b5563;
+      }
+    }
+
+    body { font-family: system-ui; padding: 20px; background: var(--bg-primary); color: var(--text-primary); }
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; }
     .header h1 { margin: 0; font-size: 20px; flex: 1; }
     .header-actions { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: flex-end; }
     .filter-container { flex: 2; display: flex; justify-content: center; }
     .filter-wrapper { position: relative; width: 100%; max-width: 400px; }
-    .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; background: #4f46e5; color: white; transition: all 0.2s; }
-    .btn:hover { background: #4338ca; transform: translateY(-1px); }
-    .path-filter-input { padding: 8px 16px; border-radius: 999px; border: 1px solid #d1d5db; font-size: 13px; width: 100%; background: #ffffff; outline: none; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .path-filter-input:focus { border-color: #4f46e5; background: #ffffff; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }
-    .search-history-dropdown { position: absolute; left: 0; top: calc(100% + 4px); width: 100%; max-height: 240px; overflow-y: auto; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; display: none; }
-    .history-item { display: flex; align-items: center; gap: 8px; padding: 8px 14px; font-size: 13px; color: #374151; cursor: pointer; }
-    .history-item:hover { background: #f3f4f6; }
+    .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; background: var(--brand-primary); color: var(--btn-text); transition: all 0.2s; }
+    .btn:hover { background: var(--brand-hover); transform: translateY(-1px); }
+    .path-filter-input { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--input-border); font-size: 13px; width: 100%; background: var(--input-bg); color: var(--text-primary); outline: none; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .path-filter-input:focus { border-color: var(--brand-primary); background: var(--input-bg); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }
+    .search-history-dropdown { position: absolute; left: 0; top: calc(100% + 4px); width: 100%; max-height: 240px; overflow-y: auto; background: var(--dropdown-bg); border: 1px solid var(--dropdown-border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; display: none; }
+    .history-item { display: flex; align-items: center; gap: 8px; padding: 8px 14px; font-size: 13px; color: var(--text-primary); cursor: pointer; }
+    .history-item:hover { background: var(--hover-bg); }
     .history-item input[type="checkbox"] { margin: 0; }
-    .record { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .record-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; border-bottom: 1px solid #f3f4f6; padding-bottom: 8px; }
+    .record { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .record-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px; }
     .badge { padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 12px; }
     .method { min-width: 50px; text-align: center; }
-    .method-GET { background: #dcfce7; color: #166534; }
-    .method-POST { background: #fef9c3; color: #854d0e; }
-    .method-default { background: #f3f4f6; color: #374151; }
-    .status-ok { background: #ecfdf3; color: #166534; }
-    .status-error { background: #fef2f2; color: #b91c1c; }
-    .section-title { font-size: 12px; font-weight: 600; color: #6b7280; margin: 12px 0 4px; text-transform: uppercase; }
-    pre { background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-family: monospace; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 0; }
-    .desc-box { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; margin-top: 8px; font-family: inherit; font-size: 13px; }
+    .method-GET { background: var(--status-success-bg); color: var(--status-success-text); }
+    .method-POST { background: var(--status-warning-bg); color: var(--status-warning-text); }
+    .method-default { background: var(--status-default-bg); color: var(--status-default-text); }
+    .status-ok { background: var(--status-success-bg); color: var(--status-success-text); }
+    .status-error { background: var(--status-error-bg); color: var(--status-error-text); }
+    .section-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 12px 0 4px; text-transform: uppercase; }
+    pre { background: var(--code-bg); padding: 10px; border-radius: 6px; border: 1px solid var(--code-border); font-family: monospace; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 0; color: var(--text-primary); }
+    .desc-box { width: 100%; padding: 8px; border: 1px solid var(--input-border); border-radius: 4px; margin-top: 8px; font-family: inherit; font-size: 13px; background: var(--input-bg); color: var(--text-primary); }
   </style>
 </head>
 <body>
@@ -50,6 +107,7 @@
     </div>
   </div>
   <div id="recordsContainer"></div>
+  <script src="theme-utils.js"></script>
   <script src="details.js"></script>
 </body>
 </html>

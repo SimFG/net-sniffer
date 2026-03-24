@@ -181,6 +181,7 @@ document.getElementById("exportMd").addEventListener("click", async () => {
 });
 
 async function initDetailsPage() {
+  await initTheme();
   setupPathFilter();
   await loadRecords();
 }

@@ -1,7 +1,8 @@
 const DEFAULT_SETTINGS = {
   pathKeyword: "",
   recordMode: "first",
-  truncateJson: true
+  truncateJson: true,
+  theme: "system"
 };
 
 let currentSettings = { ...DEFAULT_SETTINGS };
@@ -30,6 +31,12 @@ async function loadSettings() {
   recordFirstToggle.checked = (currentSettings.recordMode || "first") === "first";
   // truncateJson 默认 true，当未配置或为 true 时视为开启
   truncateJsonToggle.checked = currentSettings.truncateJson !== false;
+
+  // 加载主题设置
+  const themeSelect = document.getElementById("themeSelect");
+  if (themeSelect) {
+    themeSelect.value = currentSettings.theme || "system";
+  }
 
   renderCommonKeywords();
 }
@@ -76,6 +83,7 @@ async function saveSettings() {
   const truncateJsonToggle = document.getElementById("truncateJsonToggle");
   const saveBtn = document.getElementById("saveBtn");
   const saveStatus = document.getElementById("saveStatus");
+  const themeSelect = document.getElementById("themeSelect");
 
   // 先读最新存储，避免覆盖 pathKeyword 等其他字段
   const latest = await chrome.storage.local.get("netSnifferSettings");
@@ -84,7 +92,8 @@ async function saveSettings() {
   const nextSettings = {
     ...latestSettings,
     recordMode: recordFirstToggle.checked ? "first" : "all",
-    truncateJson: !!truncateJsonToggle.checked
+    truncateJson: !!truncateJsonToggle.checked,
+    theme: themeSelect ? themeSelect.value : "system"
   };
 
   await chrome.storage.local.set({ netSnifferSettings: nextSettings });
@@ -133,8 +142,11 @@ async function deleteCommonKeyword(keyword) {
   renderCommonKeywords();
 }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    loadSettings();
+  document.addEventListener("DOMContentLoaded", async () => {
+    // 初始化主题
+    await initTheme();
+
+    await loadSettings();
 
       document.getElementById("saveBtn").addEventListener("click", () => {
         saveSettings().catch((err) => {
@@ -160,6 +172,26 @@ async function deleteCommonKeyword(keyword) {
             addCommonKeyword().catch((err) => {
               console.error("[NetSniffer] add common keyword error", err);
             });
+          }
+        });
+      }
+
+      // 主题选择器事件绑定
+      const themeSelect = document.getElementById("themeSelect");
+      if (themeSelect) {
+        themeSelect.addEventListener("change", async (e) => {
+          const newTheme = e.target.value;
+          // 保存到存储
+          const latest = await chrome.storage.local.get("netSnifferSettings");
+          await chrome.storage.local.set({
+            netSnifferSettings: { ...(latest.netSnifferSettings || {}), theme: newTheme }
+          });
+          // 立即应用
+          if (newTheme === "system") {
+            const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            document.documentElement.dataset.theme = isDark ? "dark" : "light";
+          } else {
+            document.documentElement.dataset.theme = newTheme;
           }
         });
       }
