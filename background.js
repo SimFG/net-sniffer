@@ -155,6 +155,78 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         seenKeys = new Set();
         await saveState();
         sendResponse({ ok: true });
+      } else if (message.type === "replay-request") {
+        const { id, url, method, requestBody } = message;
+
+        // 参数校验
+        if (!url || !method) {
+          sendResponse({
+            type: "replay-response",
+            id,
+            success: false,
+            error: "invalid-parameters",
+            duration: 0,
+            timestamp: Date.now()
+          });
+          return;
+        }
+
+        // 构造 fetch 选项（初始版本不带 headers）
+        const startTime = Date.now();
+        const fetchOptions = {
+          method: method,
+        };
+
+        // 仅 POST/PUT/PATCH 带 body
+        if (["POST", "PUT", "PATCH"].includes(method) && requestBody) {
+          fetchOptions.body = requestBody;
+        }
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s 超时
+          fetchOptions.signal = controller.signal;
+
+          const response = await fetch(url, fetchOptions);
+          clearTimeout(timeoutId);
+
+          const duration = Date.now() - startTime;
+          let bodyText = "";
+          try {
+            bodyText = await response.text();
+          } catch (_) {
+            bodyText = "[无法读取响应体]";
+          }
+
+          sendResponse({
+            type: "replay-response",
+            id,
+            success: response.ok,
+            status: response.status,
+            statusText: response.statusText,
+            body: bodyText,
+            duration,
+            timestamp: Date.now()
+          });
+        } catch (e) {
+          const duration = Date.now() - startTime;
+          let errorMsg = e.message || "unknown-error";
+
+          if (e.name === "AbortError") {
+            errorMsg = "request-timeout";
+          } else if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
+            errorMsg = "cors-error";
+          }
+
+          sendResponse({
+            type: "replay-response",
+            id,
+            success: false,
+            error: errorMsg,
+            duration,
+            timestamp: Date.now()
+          });
+        }
       } else {
         sendResponse({ ok: false, error: "unknown-type" });
       }

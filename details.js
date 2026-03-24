@@ -81,21 +81,24 @@ function renderRecords(records) {
         <span class="badge ${statusClass}">${record.status || "PENDING"}</span>
         <strong style="font-size: 14px; flex: 1; word-break: break-all;">${record.path}</strong>
         <span style="color: #9ca3af; font-size: 12px;">${formatTime(record.createdAt)}</span>
+        <button class="btn-replay" data-id="${record.id}" title="重放此请求">🔄 重放</button>
       </div>
       <div style="font-size: 12px; color: #4b5563; margin-bottom: 10px;">URL: ${record.url}</div>
-      
+
       ${record.method !== 'GET' ? `
         <div class="section-title">Request Body</div>
         <pre>${truncateForAI(record.requestBody)}</pre>
       ` : ''}
-      
+
       <div class="section-title">Response Body</div>
       <pre>${truncateForAI(record.body)}</pre>
-      
+
       <div class="section-title">描述 (将导出至 Markdown)</div>
       <textarea class="desc-box" data-id="${record.id}" placeholder="添加描述，例如该接口的业务逻辑...">${record.description || ""}</textarea>
+
+      <div class="replay-result-container" data-replay-id="${record.id}"></div>
     `;
-    
+
     const textarea = div.querySelector('textarea');
     textarea.addEventListener('change', async (e) => {
       const { netSnifferLogs: logs } = await chrome.storage.local.get("netSnifferLogs");
@@ -105,8 +108,75 @@ function renderRecords(records) {
         await chrome.storage.local.set({ netSnifferLogs: logs });
       }
     });
+
+    const replayBtn = div.querySelector('.btn-replay');
+    replayBtn.addEventListener('click', () => handleReplay(record));
+
     container.appendChild(div);
   });
+}
+
+async function handleReplay(record) {
+  const container = document.querySelector(`[data-replay-id="${record.id}"]`);
+  const btn = document.querySelector(`.btn-replay[data-id="${record.id}"]`);
+
+  // 设置加载状态
+  btn.disabled = true;
+  btn.textContent = "⏳ 重放中...";
+  container.innerHTML = '<div class="replay-result"><span>发送请求中...</span></div>';
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: "replay-request",
+      id: record.id,
+      url: record.url,
+      method: record.method,
+      requestBody: record.requestBody
+    });
+
+    // 处理响应
+    if (response && response.type === "replay-response") {
+      renderReplayResult(container, response);
+    } else {
+      renderReplayResult(container, {
+        id: record.id,
+        success: false,
+        error: "invalid-response"
+      });
+    }
+  } catch (e) {
+    renderReplayResult(container, {
+      id: record.id,
+      success: false,
+      error: e.message || "发送失败"
+    });
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🔄 重放";
+  }
+}
+
+function renderReplayResult(container, result) {
+  const successClass = result.success ? "success" : "error";
+  const statusBadge = result.success
+    ? `<span class="badge status-ok">${result.status} ${result.statusText}</span>`
+    : `<span class="badge status-error">失败</span>`;
+
+  const errorHint = result.error === "cors-error"
+    ? '<div style="color: var(--status-warning-text); font-size: 12px; margin-top: 4px;">⚠️ 请求被 CORS 限制，这是浏览器安全策略，正常现象</div>'
+    : '';
+
+  container.innerHTML = `
+    <div class="replay-result ${successClass}">
+      <div class="replay-header">
+        ${statusBadge}
+        <span class="replay-duration">耗时: ${result.duration}ms</span>
+      </div>
+      ${result.body ? `<pre>${truncateForAI(result.body)}</pre>` : ''}
+      ${result.error ? `<div style="color: var(--status-error-text); font-size: 12px;">错误: ${result.error}</div>` : ''}
+      ${errorHint}
+    </div>
+  `;
 }
 
 async function loadRecords() {
