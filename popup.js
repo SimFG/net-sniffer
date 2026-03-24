@@ -175,7 +175,10 @@ async function refresh() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // 初始化主题
+  await initTheme();
+
   chrome.storage.local.get("netSnifferSearchHistory", (data) => {
     if (Array.isArray(data.netSnifferSearchHistory)) {
       keywordHistory = data.netSnifferSearchHistory;
