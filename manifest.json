@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Net Sniffer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "捕捉当前页面网络请求并支持过滤和备注的演示扩展。",
   "permissions": ["storage", "scripting"],
   "host_permissions": ["<all_urls>"],
