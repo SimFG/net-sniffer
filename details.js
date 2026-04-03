@@ -82,6 +82,7 @@ function renderRecords(records) {
         <strong style="font-size: 14px; flex: 1; word-break: break-all;">${record.path}</strong>
         <span style="color: #9ca3af; font-size: 12px;">${formatTime(record.createdAt)}</span>
         <button class="btn-replay" data-id="${record.id}" title="重放此请求">🔄 重放</button>
+        <button class="btn-download-cookie" data-id="${record.id}" title="下载此请求的Cookie">🍪 下载Cookie</button>
       </div>
       <div style="font-size: 12px; color: #4b5563; margin-bottom: 10px;">URL: ${record.url}</div>
 
@@ -111,6 +112,9 @@ function renderRecords(records) {
 
     const replayBtn = div.querySelector('.btn-replay');
     replayBtn.addEventListener('click', () => handleReplay(record));
+
+    const cookieBtn = div.querySelector('.btn-download-cookie');
+    cookieBtn.addEventListener('click', () => handleDownloadCookie(record));
 
     container.appendChild(div);
   });
@@ -178,6 +182,21 @@ function renderReplayResult(container, result) {
       ${errorHint}
     </div>
   `;
+}
+
+function handleDownloadCookie(record) {
+  const cookie = record.headers && record.headers.Cookie ? record.headers.Cookie : "";
+  if (!cookie) {
+    alert("该请求没有 Cookie 或 Cookie 为空");
+    return;
+  }
+  const blob = new Blob([cookie], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cookie-${record.id}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function loadRecords() {
